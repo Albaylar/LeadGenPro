@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
+anthropic
+requests
+beautifulsoup4
+ddgs
+openpyxl
+lxml

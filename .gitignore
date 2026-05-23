@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+venv_new/
+env/
+.env
+.venv
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+server.log
+
+# Output files
+output/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Claude
+.claude/
+
+# Environment variables
+.env
+.env.local
+.env.*.local

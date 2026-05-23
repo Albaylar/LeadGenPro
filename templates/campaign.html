@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ campaign['city']|title }} — LeadGen Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' }</script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    html:not(.dark) ::-webkit-scrollbar-thumb { background: #cbd5e1; }
+    @keyframes shimmer { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }
+    .progress-shimmer { background: linear-gradient(90deg,#2563eb 0%,#60a5fa 40%,#2563eb 100%); background-size: 200% 100%; animation: shimmer 1.8s linear infinite; }
+    .score-bar { transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+    .filter-btn.active { background: rgba(59,130,246,0.12); color: #3b82f6; border-color: rgba(59,130,246,0.35); }
+    html.dark .filter-btn.active { background: rgba(59,130,246,0.15); color: #93c5fd; border-color: rgba(59,130,246,0.4); }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-300 min-h-screen flex transition-colors duration-200">
+
+<!-- Sidebar -->
+<aside class="w-56 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed inset-y-0 left-0 z-20 shrink-0">
+  <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+    <div class="flex items-center gap-2.5">
+      <div class="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      </div>
+      <span class="font-bold text-slate-900 dark:text-white text-sm tracking-tight">LeadGen Pro</span>
+    </div>
+  </div>
+  <nav class="flex-1 p-3 space-y-0.5 overflow-y-auto">
+    <a href="/" class="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+      <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18"/></svg>
+      Kampanyalar
+    </a>
+    <a href="/settings" class="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+      <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Ayarlar
+    </a>
+  </nav>
+  <div class="p-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+    <button onclick="toggleTheme()"
+      class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-xs font-medium text-slate-500 dark:text-slate-400">
+      <span id="themeLabel">Açık Tema</span>
+      <svg id="themeIconDark" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      <svg id="themeIconLight" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+    </button>
+    <div class="flex items-center gap-2.5">
+      <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-xs font-bold text-white shrink-0">F</div>
+      <div class="min-w-0">
+        <div class="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">Furkan Albaylar</div>
+        <div class="text-xs text-slate-400 dark:text-slate-600">Berlin</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="ml-56 flex-1 flex flex-col min-h-screen">
+  <header class="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-8 py-3.5">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="/" class="text-slate-400 hover:text-slate-600 dark:text-slate-600 dark:hover:text-slate-300 transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <div class="h-4 w-px bg-slate-200 dark:bg-slate-800"></div>
+        <div>
+          <div class="flex items-center gap-2.5">
+            <h1 class="text-sm font-semibold text-slate-900 dark:text-white">{{ campaign['city']|title }}</h1>
+            {% if campaign.get('search_mode') == 'home_office' %}
+            <span class="text-xs bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 px-1.5 py-0.5 rounded-full">ev ofisi</span>
+            {% endif %}
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full border
+              {% if campaign['status'] == 'completed' %}bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200 dark:border-green-500/20
+              {% elif campaign['status'] == 'running' %}bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20
+              {% elif campaign['status'] == 'stopped' %}bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600/30
+              {% else %}bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20{% endif %}">
+              {{ campaign['status'] }}
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 dark:text-slate-600">{{ campaign['created_at'] }}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        {% if campaign['status'] in ('running', 'analyzing') %}
+        <button id="stopBtn" onclick="stopCampaign()"
+          class="flex items-center gap-1.5 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 10h6v4H9z"/></svg>
+          Durdur
+        </button>
+        {% endif %}
+        {% if can_analyze %}
+        <button id="analyzeBtn" onclick="startAnalysis()"
+          class="flex items-center gap-1.5 bg-violet-50 dark:bg-violet-500/10 hover:bg-violet-100 dark:hover:bg-violet-500/20 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-500/20 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          Siteleri Analiz Et
+        </button>
+        {% endif %}
+        <button id="sendBtn" onclick="sendEmails()"
+          {% if campaign['status'] not in ('completed','stopped') %}disabled{% endif %}
+          class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-200 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          Mail Gönder
+        </button>
+        <a href="/campaign/{{ campaign['id'] }}/download"
+          class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-all shadow-lg shadow-blue-600/20 {% if campaign['status'] not in ('completed','stopped') %}opacity-40 pointer-events-none{% endif %}">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Excel İndir
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex-1 px-8 py-6 space-y-5">
+
+    <!-- Progress Card -->
+    <div id="progressCard" class="{% if campaign['status'] not in ('running', 'analyzing') %}hidden{% endif %} bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20 rounded-xl p-5">
+      <div class="flex items-center gap-3 mb-3.5">
+        <div class="w-8 h-8 bg-amber-100 dark:bg-amber-500/10 rounded-lg flex items-center justify-center shrink-0">
+          <svg class="w-4 h-4 text-amber-500 dark:text-amber-400 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </div>
+        <div class="flex-1 min-w-0 flex items-center justify-between">
+          <span id="stepText" class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{{ campaign['progress_step'] }}</span>
+          <span id="pctText" class="text-sm font-bold text-amber-500 dark:text-amber-400 ml-4 shrink-0">{{ campaign['progress_pct'] }}%</span>
+        </div>
+      </div>
+      <div class="h-1.5 bg-amber-100 dark:bg-slate-800 rounded-full overflow-hidden">
+        <div id="progressBar" class="progress-shimmer h-full rounded-full" style="width: {{ campaign['progress_pct'] }}%"></div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-4 gap-4">
+      <div class="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/40 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Toplam</p>
+          <div class="w-7 h-7 bg-blue-50 dark:bg-blue-500/10 rounded-lg flex items-center justify-center">
+            <svg class="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </div>
+        </div>
+        <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ leads|length }}</p>
+        <p class="text-xs text-slate-400 dark:text-slate-600 mt-0.5">lead bulundu</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/40 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Yüksek</p>
+          <div class="w-7 h-7 bg-red-50 dark:bg-red-500/10 rounded-lg flex items-center justify-center">
+            <svg class="w-3.5 h-3.5 text-red-500 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+        </div>
+        <p class="text-2xl font-bold text-red-500 dark:text-red-400">{{ leads|selectattr('priority','eq','YUKSEK')|list|length }}</p>
+        <p class="text-xs text-slate-400 dark:text-slate-600 mt-0.5">öncelikli hedef</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/40 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Mail</p>
+          <div class="w-7 h-7 bg-green-50 dark:bg-green-500/10 rounded-lg flex items-center justify-center">
+            <svg class="w-3.5 h-3.5 text-green-500 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          </div>
+        </div>
+        <p class="text-2xl font-bold text-green-500 dark:text-green-400">{{ campaign['emails_sent'] }}</p>
+        <p class="text-xs text-slate-400 dark:text-slate-600 mt-0.5">gönderildi</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/40 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">Ort. Puan</p>
+          <div class="w-7 h-7 bg-violet-50 dark:bg-violet-500/10 rounded-lg flex items-center justify-center">
+            <svg class="w-3.5 h-3.5 text-violet-500 dark:text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          </div>
+        </div>
+        {% set scored = leads|selectattr('analyzed')|selectattr('quality_score')|list %}
+        <p class="text-2xl font-bold text-slate-900 dark:text-white">{% if scored %}{{ (scored|sum(attribute='quality_score') / scored|length)|int }}{% else %}—{% endif %}</p>
+        <p class="text-xs text-slate-400 dark:text-slate-600 mt-0.5">analiz edilen ort.</p>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="flex items-center gap-3">
+      <div class="relative flex-1 max-w-xs">
+        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+        <input id="searchInput" type="text" placeholder="İşletme veya sektör ara..."
+          class="w-full bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 rounded-lg pl-9 pr-4 py-2 text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+      </div>
+      <div class="flex gap-1.5">
+        <button onclick="filterPriority('ALL')" data-filter="ALL"
+          class="filter-btn active text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600/30 bg-slate-100 dark:bg-slate-700/40 text-slate-600 dark:text-slate-400">Tümü</button>
+        <button onclick="filterPriority('YUKSEK')" data-filter="YUKSEK"
+          class="filter-btn text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600/30 bg-slate-100 dark:bg-slate-700/40 text-slate-600 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400">Yüksek</button>
+        <button onclick="filterPriority('ORTA')" data-filter="ORTA"
+          class="filter-btn text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600/30 bg-slate-100 dark:bg-slate-700/40 text-slate-600 dark:text-slate-400 hover:text-amber-500 dark:hover:text-amber-400">Orta</button>
+        <button onclick="filterPriority('DUSUK')" data-filter="DUSUK"
+          class="filter-btn text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600/30 bg-slate-100 dark:bg-slate-700/40 text-slate-600 dark:text-slate-400 hover:text-green-500 dark:hover:text-green-400">Düşük</button>
+      </div>
+      <p class="text-xs text-slate-400 dark:text-slate-600 ml-auto"><span id="visibleCount">{{ leads|length }}</span> sonuç</p>
+    </div>
+
+    <!-- Leads Table -->
+    <div class="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/40 rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 dark:border-slate-700/60">
+              <th class="px-5 py-3 text-left cursor-pointer select-none" onclick="sortBy('priority')">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Öncelik</span>
+                  <div class="relative" onclick="event.stopPropagation()">
+                    <svg class="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 cursor-help peer" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12.01" y2="8"/><polyline points="11 12 12 12 12 16"/></svg>
+                    <div class="hidden peer-hover:block absolute left-0 top-5 w-64 bg-slate-900 text-white text-xs rounded-xl p-3 shadow-2xl z-50 space-y-2">
+                      <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-400 shrink-0"></span><span><b>YÜKSEK</b> = Kötü site → En iyi müşteri adayı</span></div>
+                      <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span><span><b>ORTA</b> = Orta kalite site</span></div>
+                      <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400 shrink-0"></span><span><b>DÜŞÜK</b> = İyi site → Düşük öncelik</span></div>
+                      <p class="text-slate-400 border-t border-slate-700 pt-1.5">Kötü siteye sahip işletmeler web hizmetine en çok ihtiyaç duyar.</p>
+                    </div>
+                  </div>
+                  <span id="sort-priority" class="text-xs text-slate-300 dark:text-slate-700 ml-1">↕</span>
+                </div>
+              </th>
+              <th class="px-5 py-3 text-left cursor-pointer select-none" onclick="sortBy('name')">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">İşletme</span>
+                  <span id="sort-name" class="text-xs text-slate-300 dark:text-slate-700">↕</span>
+                </div>
+              </th>
+              <th class="px-5 py-3 text-left cursor-pointer select-none" onclick="sortBy('sector')">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Sektör</span>
+                  <span id="sort-sector" class="text-xs text-slate-300 dark:text-slate-700">↕</span>
+                </div>
+              </th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Website</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">E-posta</th>
+              <th class="px-5 py-3 text-left cursor-pointer select-none w-36" onclick="sortBy('score')">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Kalite</span>
+                  <span id="sort-score" class="text-xs text-slate-300 dark:text-slate-700">↕</span>
+                </div>
+              </th>
+              <th class="px-5 py-3 text-center text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider w-16">Mail</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for lead in leads %}
+            <tr class="lead-row border-t border-slate-50 dark:border-slate-700/30 hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors cursor-pointer"
+              data-priority="{{ lead['priority'] or '' }}"
+              data-name="{{ (lead['name'] ~ ' ' ~ lead['sector'])|lower }}"
+              data-score="{{ lead['quality_score'] or 0 }}"
+              data-sector="{{ lead['sector']|lower }}"
+              onclick="showPreview({{ lead['id'] }})"
+              >
+              <td class="px-5 py-3.5">
+                {% if lead['analyzed'] %}
+                <span class="text-xs font-semibold px-2.5 py-1 rounded-full border
+                  {% if lead['priority'] == 'YUKSEK' %}bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20
+                  {% elif lead['priority'] == 'ORTA' %}bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20
+                  {% else %}bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200 dark:border-green-500/20{% endif %}">
+                  {% if lead['priority'] == 'YUKSEK' %}Yüksek{% elif lead['priority'] == 'ORTA' %}Orta{% else %}Düşük{% endif %}
+                </span>
+                {% else %}
+                <span class="text-xs text-slate-400 dark:text-slate-600 italic">Bekliyor</span>
+                {% endif %}
+              </td>
+              <td class="px-5 py-3.5">
+                <span class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ lead['name'] }}</span>
+                {% if lead['issues'] %}
+                <div class="flex flex-wrap gap-1 mt-1">
+                  {% for issue in lead['issues'].split(', ')[:2] %}
+                  <span class="text-xs text-slate-400 dark:text-slate-600 bg-slate-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">{{ issue }}</span>
+                  {% endfor %}
+                  {% if lead['issues'].split(', ')|length > 2 %}
+                  <span class="text-xs text-slate-300 dark:text-slate-700">+{{ lead['issues'].split(', ')|length - 2 }}</span>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </td>
+              <td class="px-5 py-3.5">
+                <span class="text-xs text-slate-500 dark:text-slate-500 bg-slate-100 dark:bg-slate-700/40 px-2 py-1 rounded-md">{{ lead['sector'] }}</span>
+              </td>
+              <td class="px-5 py-3.5">
+                {% if lead['website'] %}
+                <a href="{{ lead['website'] }}" target="_blank" rel="noopener" onclick="event.stopPropagation()"
+                  class="text-xs text-blue-500 dark:text-blue-400 hover:underline block truncate max-w-[160px]">
+                  {{ lead['website']|replace('https://','') |replace('http://','') |truncate(30, true, '…') }}
+                </a>
+                {% else %}<span class="text-xs text-slate-300 dark:text-slate-700">—</span>{% endif %}
+              </td>
+              <td class="px-5 py-3.5">
+                {% if lead['email'] %}
+                <span class="text-xs text-slate-600 dark:text-slate-400 block truncate max-w-[180px]">{{ lead['email'] }}</span>
+                {% else %}<span class="text-xs text-slate-300 dark:text-slate-700">—</span>{% endif %}
+              </td>
+              <td class="px-5 py-3.5">
+                {% if lead['analyzed'] %}
+                  {% set score = lead['quality_score'] or 0 %}
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div class="score-bar h-full rounded-full
+                        {% if score < 50 %}bg-red-500{% elif score < 75 %}bg-amber-500{% else %}bg-green-500{% endif %}"
+                        style="width:{{ score }}%"></div>
+                    </div>
+                    <span class="text-xs font-bold w-7 text-right shrink-0
+                      {% if score < 50 %}text-red-500 dark:text-red-400{% elif score < 75 %}text-amber-500 dark:text-amber-400{% else %}text-green-500 dark:text-green-400{% endif %}">
+                      {{ score }}
+                    </span>
+                  </div>
+                {% else %}
+                  <span class="text-xs text-slate-400 dark:text-slate-600 italic">—</span>
+                {% endif %}
+              </td>
+              <td class="px-5 py-3.5 text-center">
+                {% if lead['email_sent'] == 'Evet' %}
+                <span class="inline-flex items-center justify-center w-6 h-6 bg-green-50 dark:bg-green-500/10 rounded-full">
+                  <svg class="w-3.5 h-3.5 text-green-500 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </span>
+                {% elif lead['email_sent'] == 'Hata' %}
+                <span class="inline-flex items-center justify-center w-6 h-6 bg-red-50 dark:bg-red-500/10 rounded-full">
+                  <svg class="w-3.5 h-3.5 text-red-500 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </span>
+                {% else %}<span class="text-slate-300 dark:text-slate-700 text-xs">—</span>{% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="text-center py-20">
+              <div class="w-10 h-10 bg-slate-100 dark:bg-slate-800/80 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <svg class="w-5 h-5 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </div>
+              <p class="text-sm text-slate-400 dark:text-slate-600 font-medium">Analiz devam ediyor</p>
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lead Preview Slide-over -->
+<div id="previewOverlay" class="fixed inset-0 z-40 hidden">
+  <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closePreview()"></div>
+  <div class="absolute right-0 inset-y-0 w-[500px] max-w-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
+      <div class="min-w-0">
+        <h2 id="pName" class="text-sm font-semibold text-slate-900 dark:text-white truncate">—</h2>
+        <p id="pSector" class="text-xs text-slate-400 dark:text-slate-600 mt-0.5">—</p>
+      </div>
+      <button onclick="closePreview()" class="ml-4 shrink-0 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="pLoading" class="flex-1 flex items-center justify-center">
+      <svg class="w-6 h-6 text-slate-300 dark:text-slate-600 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+    </div>
+    <div id="pContent" class="flex-1 overflow-y-auto px-6 py-5 space-y-5 hidden">
+      <!-- Priority + Score -->
+      <div class="flex items-center gap-3">
+        <span id="pPriority" class="text-xs font-semibold px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-600 shrink-0">—</span>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-slate-400 dark:text-slate-600">Web Sitesi Kalitesi</span>
+            <span id="pScore" class="text-xs font-bold text-slate-400 dark:text-slate-500">—</span>
+          </div>
+          <div class="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div id="pScoreBar" class="h-full rounded-full bg-slate-300 dark:bg-slate-600 transition-all duration-700" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Contact info -->
+      <div class="space-y-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/40 rounded-xl p-4">
+        <div id="pWebsiteRow" class="hidden">
+          <p class="text-xs font-medium text-slate-400 dark:text-slate-500 mb-1">Website</p>
+          <a id="pWebsite" href="#" target="_blank" rel="noopener" class="text-sm text-blue-500 dark:text-blue-400 hover:underline break-all">—</a>
+        </div>
+        <div id="pEmailRow" class="hidden">
+          <p class="text-xs font-medium text-slate-400 dark:text-slate-500 mb-1">E-posta</p>
+          <p id="pEmail" class="text-sm text-slate-700 dark:text-slate-300 break-all">—</p>
+        </div>
+        <div id="pPhoneRow" class="hidden">
+          <p class="text-xs font-medium text-slate-400 dark:text-slate-500 mb-1">Telefon</p>
+          <p id="pPhone" class="text-sm text-slate-700 dark:text-slate-300">—</p>
+        </div>
+        <p id="pNoInfo" class="text-xs text-slate-400 dark:text-slate-600 italic">İletişim bilgisi bulunamadı</p>
+      </div>
+      <!-- Issues -->
+      <div id="pIssuesRow" class="hidden">
+        <p class="text-xs font-medium text-slate-400 dark:text-slate-500 mb-2">Tespit Edilen Sorunlar</p>
+        <div id="pIssues" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <!-- Email preview -->
+      <div class="border-t border-slate-100 dark:border-slate-800 pt-4">
+        <p class="text-xs font-medium text-slate-400 dark:text-slate-500 mb-2">E-posta Önizleme</p>
+        <div id="pEmailPreview" class="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 rounded-xl p-4 text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap font-mono leading-relaxed max-h-60 overflow-y-auto">—</div>
+        <p id="pEmailNote" class="text-xs text-slate-400 dark:text-slate-600 mt-2 italic hidden"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-6 right-6 hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium px-4 py-3 rounded-xl shadow-xl z-50 flex items-center gap-2.5">
+  <svg class="w-4 h-4 text-green-500 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+  <span id="toastMsg">İşlem başlatıldı</span>
+</div>
+
+<script>
+function applyTheme(dark) {
+  if (dark) {
+    document.documentElement.classList.add('dark');
+    document.getElementById('themeLabel').textContent = 'Açık Tema';
+    document.getElementById('themeIconDark').classList.remove('hidden');
+    document.getElementById('themeIconLight').classList.add('hidden');
+  } else {
+    document.documentElement.classList.remove('dark');
+    document.getElementById('themeLabel').textContent = 'Koyu Tema';
+    document.getElementById('themeIconDark').classList.add('hidden');
+    document.getElementById('themeIconLight').classList.remove('hidden');
+  }
+}
+function toggleTheme() {
+  const isDark = document.documentElement.classList.contains('dark');
+  localStorage.setItem('theme', isDark ? 'light' : 'dark');
+  applyTheme(!isDark);
+}
+applyTheme(localStorage.getItem('theme') !== 'light');
+
+const cid = {{ campaign['id'] }};
+const status = "{{ campaign['status'] }}";
+
+if (status === 'running' || status === 'analyzing') {
+  const progressCard = document.getElementById('progressCard');
+  if (progressCard) progressCard.classList.remove('hidden');
+  const poll = setInterval(async () => {
+    try {
+      const res = await fetch(`/campaign/${cid}/progress`);
+      const d = await res.json();
+      const stepEl = document.getElementById('stepText');
+      const pctEl  = document.getElementById('pctText');
+      const barEl  = document.getElementById('progressBar');
+      if (stepEl) stepEl.textContent = d.step;
+      if (pctEl)  pctEl.textContent  = d.pct + '%';
+      if (barEl)  barEl.style.width  = d.pct + '%';
+      if (d.status !== 'running' && d.status !== 'analyzing') {
+        clearInterval(poll);
+        window.location.reload();
+      }
+    } catch {}
+  }, 2000);
+}
+
+async function startAnalysis() {
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Başlatılıyor...`;
+  try {
+    const res = await fetch(`/campaign/${cid}/analyze`, { method: 'POST' });
+    if (res.ok) {
+      showToast('Web sitesi analizi başlatıldı');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Analiz başlatılamadı');
+      btn.disabled = false;
+      btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Siteleri Analiz Et`;
+    }
+  } catch {
+    showToast('Bağlantı hatası');
+    btn.disabled = false;
+  }
+}
+
+async function stopCampaign() {
+  const btn = document.getElementById('stopBtn');
+  btn.disabled = true;
+  btn.textContent = 'Durduruluyor...';
+  const res = await fetch(`/campaign/${cid}/stop`, { method: 'POST' });
+  if (res.ok) { showToast('Kampanya durdurma sinyali gönderildi'); setTimeout(() => location.reload(), 3000); }
+  else { btn.disabled = false; btn.textContent = 'Durdur'; showToast('Hata oluştu'); }
+}
+
+async function sendEmails() {
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Gönderiliyor...`;
+  await fetch(`/campaign/${cid}/send-emails`, { method: 'POST' });
+  showToast('Mailler gönderiliyor...');
+  setTimeout(() => location.reload(), 18000);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 5000);
+}
+
+let currentFilter = 'ALL';
+function filterPriority(p) {
+  currentFilter = p;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-filter="${p}"]`).classList.add('active');
+  applyFilters();
+}
+function applyFilters() {
+  const search = document.getElementById('searchInput').value.toLowerCase().trim();
+  let visible = 0;
+  document.querySelectorAll('.lead-row').forEach(row => {
+    const show = (currentFilter === 'ALL' || row.dataset.priority === currentFilter)
+              && (!search || row.dataset.name.includes(search));
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  document.getElementById('visibleCount').textContent = visible;
+}
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+// ── Table sorting ──────────────────────────────────────────────────────────
+let sortCol = null, sortDir = 1;
+const PRIORITY_ORDER = { YUKSEK: 0, ORTA: 1, DUSUK: 2, '': 3 };
+
+function sortBy(col) {
+  if (sortCol === col) sortDir = -sortDir;
+  else { sortCol = col; sortDir = 1; }
+  const tbody = document.querySelector('tbody');
+  Array.from(document.querySelectorAll('.lead-row'))
+    .sort((a, b) => {
+      const av = a.dataset[col] || '';
+      const bv = b.dataset[col] || '';
+      if (col === 'score')    return (parseFloat(av) - parseFloat(bv)) * sortDir;
+      if (col === 'priority') return ((PRIORITY_ORDER[av] ?? 3) - (PRIORITY_ORDER[bv] ?? 3)) * sortDir;
+      return av.localeCompare(bv, 'tr') * sortDir;
+    })
+    .forEach(r => tbody.appendChild(r));
+  ['priority', 'name', 'sector', 'score'].forEach(c => {
+    const el = document.getElementById('sort-' + c);
+    if (el) el.textContent = c === col ? (sortDir === 1 ? '↑' : '↓') : '↕';
+  });
+  applyFilters();
+}
+
+// ── Lead preview slide-over ────────────────────────────────────────────────
+async function showPreview(lid) {
+  const overlay = document.getElementById('previewOverlay');
+  const loading = document.getElementById('pLoading');
+  const content = document.getElementById('pContent');
+  overlay.classList.remove('hidden');
+  loading.classList.remove('hidden');
+  content.classList.add('hidden');
+  try {
+    const res = await fetch(`/campaign/${cid}/lead/${lid}/preview`);
+    const d = await res.json();
+    const lead = d.lead;
+
+    document.getElementById('pName').textContent   = lead.name   || '—';
+    document.getElementById('pSector').textContent = lead.sector || '—';
+
+    // Priority badge
+    const prEl = document.getElementById('pPriority');
+    if (lead.analyzed) {
+      const prMap = {
+        YUKSEK: ['Yüksek Öncelik', 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20'],
+        ORTA:   ['Orta Öncelik',   'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'],
+        DUSUK:  ['Düşük Öncelik',  'bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200 dark:border-green-500/20'],
+      };
+      const [label, cls] = prMap[lead.priority] || ['—', 'border-slate-200 dark:border-slate-700 text-slate-400'];
+      prEl.textContent = label;
+      prEl.className = `text-xs font-semibold px-3 py-1.5 rounded-full border shrink-0 ${cls}`;
+    } else {
+      prEl.textContent = 'Analiz Bekleniyor';
+      prEl.className = 'text-xs font-semibold px-3 py-1.5 rounded-full border shrink-0 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-600 italic';
+    }
+
+    // Score bar
+    const score = lead.quality_score || 0;
+    const scoreEl = document.getElementById('pScore');
+    const barEl   = document.getElementById('pScoreBar');
+    if (lead.analyzed) {
+      const colorCls = score < 50 ? 'text-red-500 dark:text-red-400' : score < 75 ? 'text-amber-500 dark:text-amber-400' : 'text-green-500 dark:text-green-400';
+      const barCls   = score < 50 ? 'bg-red-500' : score < 75 ? 'bg-amber-500' : 'bg-green-500';
+      scoreEl.textContent = score + '/100';
+      scoreEl.className   = `text-xs font-bold ${colorCls}`;
+      barEl.style.width   = score + '%';
+      barEl.className     = `h-full rounded-full transition-all duration-700 ${barCls}`;
+    } else {
+      scoreEl.textContent = '—'; scoreEl.className = 'text-xs font-bold text-slate-400';
+      barEl.style.width = '0%'; barEl.className = 'h-full rounded-full bg-slate-300 dark:bg-slate-600 transition-all duration-700';
+    }
+
+    // Contact info rows
+    let hasInfo = false;
+    const wsRow = document.getElementById('pWebsiteRow');
+    if (lead.website) {
+      wsRow.classList.remove('hidden');
+      const a = document.getElementById('pWebsite');
+      a.href = lead.website;
+      a.textContent = lead.website.replace(/^https?:\/\//, '');
+      hasInfo = true;
+    } else wsRow.classList.add('hidden');
+
+    const emRow = document.getElementById('pEmailRow');
+    if (lead.email) {
+      emRow.classList.remove('hidden');
+      document.getElementById('pEmail').textContent = lead.email;
+      hasInfo = true;
+    } else emRow.classList.add('hidden');
+
+    const phRow = document.getElementById('pPhoneRow');
+    if (lead.phone) {
+      phRow.classList.remove('hidden');
+      document.getElementById('pPhone').textContent = lead.phone;
+      hasInfo = true;
+    } else phRow.classList.add('hidden');
+
+    document.getElementById('pNoInfo').classList.toggle('hidden', hasInfo);
+
+    // Issues
+    const issRow = document.getElementById('pIssuesRow');
+    const issues = (lead.issues || '').split(', ').filter(Boolean);
+    if (issues.length) {
+      issRow.classList.remove('hidden');
+      document.getElementById('pIssues').innerHTML = issues
+        .map(i => `<span class="text-xs bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 px-2 py-1 rounded-md">${i}</span>`)
+        .join('');
+    } else issRow.classList.add('hidden');
+
+    // Email preview
+    const epEl   = document.getElementById('pEmailPreview');
+    const noteEl = document.getElementById('pEmailNote');
+    if (d.email_preview) {
+      epEl.textContent = d.email_preview;
+      noteEl.classList.add('hidden');
+    } else {
+      epEl.textContent    = '—';
+      noteEl.textContent  = d.has_api_key
+        ? 'Claude AI ile gönderim sırasında oluşturulacak (şablon girilmemiş).'
+        : 'Önizleme için Ayarlar\'dan e-posta şablonu veya API anahtarı girin.';
+      noteEl.classList.remove('hidden');
+    }
+
+    loading.classList.add('hidden');
+    content.classList.remove('hidden');
+  } catch (e) {
+    loading.classList.add('hidden');
+    content.classList.remove('hidden');
+    document.getElementById('pEmailPreview').textContent = 'Yüklenemedi: ' + e.message;
+  }
+}
+
+function closePreview() {
+  document.getElementById('previewOverlay').classList.add('hidden');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePreview(); });
+</script>
+</body>
+</html>
