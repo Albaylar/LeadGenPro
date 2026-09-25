@@ -50,7 +50,7 @@ def _extract_from_html(soup: BeautifulSoup, text: str, own_email: str = "") -> l
 
     for a in soup.find_all("a", href=re.compile(r"^mailto:", re.I)):
         href = a.get("href", "")
-        email = href.replace("mailto:", "").split("?")[0].strip()
+        email = re.sub(r'^mailto:', '', href, flags=re.I).split("?")[0].strip()
         if email and _is_valid_email(email, own_email):
             found.add(email)
 
