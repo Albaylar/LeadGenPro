@@ -97,6 +97,7 @@ def run_campaign(cid: int, city: str, sectors: list[str],
                         progress_step=f"{total} site analiz ediliyor...",
                         progress_pct=35)
         leads = get_leads(cid)
+        own_email = get_setting("gmail_user", "")
 
         for i, lead in enumerate(leads):
             if signal.is_set():
@@ -116,7 +117,6 @@ def run_campaign(cid: int, city: str, sectors: list[str],
                     page_title=result.get("title", ""),
                 )
 
-                own_email = get_setting("gmail_user", "")
                 emails = extract_emails(
                     result.get("soup"),
                     result.get("response_text", ""),
@@ -171,6 +171,8 @@ def analyze_campaign_leads(cid: int):
                         progress_pct=5)
         logger.info("Manuel analiz başladı — kampanya %d, %d site", cid, total)
 
+        own_email = get_setting("gmail_user", "")
+
         for i, lead in enumerate(to_analyze):
             if signal.is_set():
                 update_campaign(cid,
@@ -187,7 +189,6 @@ def analyze_campaign_leads(cid: int):
                 page_title=result.get("title", ""),
             )
 
-            own_email = get_setting("gmail_user", "")
             emails = extract_emails(
                 result.get("soup"),
                 result.get("response_text", ""),
