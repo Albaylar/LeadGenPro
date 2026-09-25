@@ -736,7 +736,13 @@ async function sendFollowups() {
   btn.disabled = true;
   btn.textContent = 'Gönderiliyor...';
   try {
-    const res = await fetch(`/campaign/{{ campaign.id }}/send-followups`, { method: 'POST' });
+    const res = await fetch(`/campaign/${cid}/send-followups`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json();
+      btn.textContent = 'Hata';
+      btn.disabled = false;
+      return;
+    }
     const data = await res.json();
     if (data.ok) {
       btn.textContent = 'Gönderildi ✓';
