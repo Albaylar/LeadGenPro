@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ campaign['city']|title }} — LeadGen Pro</title>
+  <title>{{ campaign['city']|title }} — B2B Outreach Pro</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -30,7 +30,7 @@
       <div class="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center shrink-0">
         <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
       </div>
-      <span class="font-bold text-slate-900 dark:text-white text-sm tracking-tight">LeadGen Pro</span>
+      <span class="font-bold text-slate-900 dark:text-white text-sm tracking-tight">B2B Outreach Pro</span>
     </div>
   </div>
   <nav class="flex-1 p-3 space-y-0.5 overflow-y-auto">
@@ -72,6 +72,9 @@
         <div>
           <div class="flex items-center gap-2.5">
             <h1 class="text-sm font-semibold text-slate-900 dark:text-white">{{ campaign['city']|title }}</h1>
+            {% if offering %}
+            <span class="text-xs bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 px-1.5 py-0.5 rounded-full">{{ offering.name }}</span>
+            {% endif %}
             {% if campaign.get('search_mode') == 'home_office' %}
             <span class="text-xs bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 px-1.5 py-0.5 rounded-full">ev ofisi</span>
             {% endif %}
@@ -101,11 +104,30 @@
           Siteleri Analiz Et
         </button>
         {% endif %}
+        <button id="checkRepliesBtn" onclick="checkReplies()"
+          {% if campaign['status'] not in ('completed','stopped') %}disabled{% endif %}
+          class="flex items-center gap-1.5 bg-green-50 dark:bg-green-500/10 hover:bg-green-100 dark:hover:bg-green-500/20 disabled:opacity-40 disabled:cursor-not-allowed text-green-600 dark:text-green-400 border border-green-200 dark:border-green-500/20 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Cevapları Kontrol Et
+        </button>
         <button id="sendBtn" onclick="sendEmails()"
           {% if campaign['status'] not in ('completed','stopped') %}disabled{% endif %}
           class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 dark:text-slate-200 text-xs font-semibold px-3.5 py-2 rounded-lg transition-all">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
           Mail Gönder
+        </button>
+        <button
+          id="btnFollowup"
+          onclick="sendFollowups()"
+          class="px-4 py-2 text-sm font-medium rounded-lg bg-violet-600 hover:bg-violet-500 text-white transition-colors disabled:opacity-50"
+          {% if followup_count == 0 %}disabled{% endif %}
+        >
+          Follow-up Gönder
+          {% if followup_count > 0 %}
+            <span class="ml-1 bg-white/20 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+              {{ followup_count }}
+            </span>
+          {% endif %}
         </button>
         <a href="/campaign/{{ campaign['id'] }}/download"
           class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-all shadow-lg shadow-blue-600/20 {% if campaign['status'] not in ('completed','stopped') %}opacity-40 pointer-events-none{% endif %}">
@@ -144,7 +166,7 @@
           </div>
         </div>
         <p class="text-2xl font-bold text-slate-900 dark:text-white">{{ leads|length }}</p>
-        <p class="text-xs text-slate-400 dark:text-slate-600 mt-0.5">lead bulundu</p>
+        <p class="text-xs text-slate-400 dark:text-slate-600 mt-0.5">aday bulundu</p>
       </div>
       <div class="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/40 rounded-xl p-5">
         <div class="flex items-center justify-between mb-3">
@@ -154,7 +176,7 @@
           </div>
         </div>
         <p class="text-2xl font-bold text-red-500 dark:text-red-400">{{ leads|selectattr('priority','eq','YUKSEK')|list|length }}</p>
-        <p class="text-xs text-slate-400 dark:text-slate-600 mt-0.5">öncelikli hedef</p>
+        <p class="text-xs text-slate-400 dark:text-slate-600 mt-0.5">öncelikli aday</p>
       </div>
       <div class="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/40 rounded-xl p-5">
         <div class="flex items-center justify-between mb-3">
@@ -238,11 +260,12 @@
               <th class="px-5 py-3 text-left text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">E-posta</th>
               <th class="px-5 py-3 text-left cursor-pointer select-none w-36" onclick="sortBy('score')">
                 <div class="flex items-center gap-1.5">
-                  <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Kalite</span>
+                  <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Uyum Skoru</span>
                   <span id="sort-score" class="text-xs text-slate-300 dark:text-slate-700">↕</span>
                 </div>
               </th>
               <th class="px-5 py-3 text-center text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider w-16">Mail</th>
+              <th class="px-5 py-3 text-center text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider w-20">Cevap</th>
             </tr>
           </thead>
           <tbody>
@@ -315,7 +338,7 @@
               </td>
               <td class="px-5 py-3.5 text-center">
                 {% if lead['email_sent'] == 'Evet' %}
-                <span class="inline-flex items-center justify-center w-6 h-6 bg-green-50 dark:bg-green-500/10 rounded-full">
+                <span class="inline-flex items-center justify-center w-6 h-6 bg-green-50 dark:bg-green-500/10 rounded-full" title="Gönderim Tarihi: {{ lead['email_sent_at'] or '—' }}">
                   <svg class="w-3.5 h-3.5 text-green-500 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                 </span>
                 {% elif lead['email_sent'] == 'Hata' %}
@@ -323,6 +346,15 @@
                   <svg class="w-3.5 h-3.5 text-red-500 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </span>
                 {% else %}<span class="text-slate-300 dark:text-slate-700 text-xs">—</span>{% endif %}
+              </td>
+              <td class="px-5 py-3.5 text-center">
+                {% if lead['reply_received'] %}
+                <span class="text-xs bg-green-500/15 text-green-600 dark:text-green-400 border border-green-500/25 px-2 py-1 rounded-full font-medium" title="Cevap Tarihi: {{ lead['replied_at'] or '—' }}">
+                  Cevaplandı
+                </span>
+                {% else %}
+                <span class="text-slate-300 dark:text-slate-700 text-xs">—</span>
+                {% endif %}
               </td>
             </tr>
             {% else %}
@@ -383,6 +415,14 @@
         <div id="pPhoneRow" class="hidden">
           <p class="text-xs font-medium text-slate-400 dark:text-slate-500 mb-1">Telefon</p>
           <p id="pPhone" class="text-sm text-slate-700 dark:text-slate-300">—</p>
+        </div>
+        <div id="pSentRow" class="hidden">
+          <p class="text-xs font-medium text-slate-400 dark:text-slate-500 mb-1">Outreach Gönderim Tarihi</p>
+          <p id="pSent" class="text-sm text-slate-700 dark:text-slate-300">—</p>
+        </div>
+        <div id="pReplyRow" class="hidden">
+          <p class="text-xs font-medium text-slate-400 dark:text-slate-500 mb-1">Cevap Durumu</p>
+          <p id="pReply" class="text-sm text-green-600 dark:text-green-400 font-semibold">—</p>
         </div>
         <p id="pNoInfo" class="text-xs text-slate-400 dark:text-slate-600 italic">İletişim bilgisi bulunamadı</p>
       </div>
@@ -615,6 +655,20 @@ async function showPreview(lid) {
       hasInfo = true;
     } else phRow.classList.add('hidden');
 
+    const sentRow = document.getElementById('pSentRow');
+    if (lead.email_sent === 'Evet') {
+      sentRow.classList.remove('hidden');
+      document.getElementById('pSent').textContent = lead.email_sent_at ? new Date(lead.email_sent_at).toLocaleString('tr-TR') : 'Bilinmiyor';
+      hasInfo = true;
+    } else sentRow.classList.add('hidden');
+
+    const repRow = document.getElementById('pReplyRow');
+    if (lead.reply_received) {
+      repRow.classList.remove('hidden');
+      document.getElementById('pReply').textContent = 'Cevaplandı (' + (lead.replied_at || 'Bilinmiyor') + ')';
+      hasInfo = true;
+    } else repRow.classList.add('hidden');
+
     document.getElementById('pNoInfo').classList.toggle('hidden', hasInfo);
 
     // Issues
@@ -654,6 +708,47 @@ function closePreview() {
   document.getElementById('previewOverlay').classList.add('hidden');
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closePreview(); });
+
+async function checkReplies() {
+  const btn = document.getElementById('checkRepliesBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Cevaplar Denetleniyor...`;
+  try {
+    const res = await fetch(`/campaign/${cid}/check-replies`, { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      showToast(`${data.new_replies} yeni cevap tespit edildi.`);
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Cevaplar kontrol edilemedi.');
+      btn.disabled = false;
+      btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Cevapları Kontrol Et`;
+    }
+  } catch {
+    showToast('Bağlantı hatası.');
+    btn.disabled = false;
+  }
+}
+
+async function sendFollowups() {
+  const btn = document.getElementById('btnFollowup');
+  btn.disabled = true;
+  btn.textContent = 'Gönderiliyor...';
+  try {
+    const res = await fetch(`/campaign/{{ campaign.id }}/send-followups`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      btn.textContent = 'Gönderildi ✓';
+    } else {
+      btn.textContent = 'Hata';
+      btn.disabled = false;
+    }
+  } catch {
+    btn.textContent = 'Hata';
+    btn.disabled = false;
+  }
+}
 </script>
 </body>
 </html>
