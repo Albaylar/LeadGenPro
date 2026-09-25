@@ -190,7 +190,9 @@ def send_email(to_email: str, business_name: str, full_email: str,
 
     if extra_headers:
         for key, val in extra_headers.items():
-            msg[key] = val
+            safe_key = str(key).strip().replace("\r", "").replace("\n", "")
+            safe_val = str(val).strip().replace("\r", "").replace("\n", "")
+            msg[safe_key] = safe_val
 
     plain = full_email
 
