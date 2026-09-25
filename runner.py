@@ -7,33 +7,45 @@ import threading
 import anthropic
 
 from db import (update_campaign, save_leads, get_setting,
-                get_leads, update_lead_email, update_lead_score)
+                get_leads, update_lead_email, update_lead_score,
+                get_campaign, get_offering, save_outreach_message,
+                get_last_outreach_step, update_lead_contact_email)
 from agents.research_agent import research_berlin_businesses
 from agents.quality_agent import analyze_website
-from agents.email_agent import generate_email, send_email
+from agents.email_agent import generate_outreach, send_email
+from agents.contact_agent import extract_emails
 
 logger = logging.getLogger(__name__)
 
-THRESHOLD = 75
+# Tek kaynak eşikler — hem runner hem excel_agent buradan okur.
+# Düşük puan = kötü site = yüksek öncelikli lead.
+PRIORITY_HIGH_MAX = 75   # score < 75  → YUKSEK
+PRIORITY_MID_MAX  = 90   # score < 90  → ORTA, aksi DUSUK
+THRESHOLD = PRIORITY_HIGH_MAX  # geriye dönük uyum
 EMAIL_RE  = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')
 
 # Çalışan kampanyaların durdurma sinyalleri: {campaign_id: threading.Event}
 _stop_signals: dict[int, threading.Event] = {}
+_stop_signals_lock = threading.Lock()
 
 
 def stop_campaign(cid: int) -> bool:
     """Çalışan kampanyaya durdurma sinyali gönder. True dönerse sinyal iletildi."""
-    signal = _stop_signals.get(cid)
+    with _stop_signals_lock:
+        signal = _stop_signals.get(cid)
     if signal:
         signal.set()
         return True
     return False
 
 
-def priority_label(score: int) -> str:
-    if score < THRESHOLD:
+def priority_label(score: int | None) -> str:
+    """Lead önceliği — düşük puan = yüksek öncelik (kötü site, satış fırsatı)."""
+    if score is None:
+        return "ORTA"
+    if score < PRIORITY_HIGH_MAX:
         return "YUKSEK"
-    if score < 90:
+    if score < PRIORITY_MID_MAX:
         return "ORTA"
     return "DUSUK"
 
@@ -41,7 +53,8 @@ def priority_label(score: int) -> str:
 def run_campaign(cid: int, city: str, sectors: list[str],
                  home_office: bool = False, analyze: bool = False):
     signal = threading.Event()
-    _stop_signals[cid] = signal
+    with _stop_signals_lock:
+        _stop_signals[cid] = signal
 
     try:
         mode = "home_office" if home_office else "standard"
@@ -97,8 +110,22 @@ def run_campaign(cid: int, city: str, sectors: list[str],
             url = lead["website"]
             if url:
                 result = analyze_website(url)
-                update_lead_score(lead["id"], result["score"], result["issues"],
-                                  priority_label(result["score"]))
+                update_lead_score(
+                    lead["id"], result["score"], result["issues"],
+                    priority_label(result["score"]),
+                    page_title=result.get("title", ""),
+                )
+
+                own_email = get_setting("gmail_user", "")
+                emails = extract_emails(
+                    result.get("soup"),
+                    result.get("response_text", ""),
+                    result.get("url", url),
+                    own_email=own_email,
+                )
+                if emails and not lead["email"]:
+                    update_lead_contact_email(lead["id"], emails[0])
+                    logger.info("Email bulundu: %s ← %s", lead["name"], emails[0])
             else:
                 update_lead_score(lead["id"], 0, ["Website yok"], "YUKSEK")
 
@@ -116,13 +143,15 @@ def run_campaign(cid: int, city: str, sectors: list[str],
                         progress_step="Beklenmeyen hata — logları kontrol et",
                         progress_pct=0)
     finally:
-        _stop_signals.pop(cid, None)
+        with _stop_signals_lock:
+            _stop_signals.pop(cid, None)
 
 
 def analyze_campaign_leads(cid: int):
     """Kullanıcı tarafından tetiklenen web sitesi analizi."""
     signal = threading.Event()
-    _stop_signals[cid] = signal
+    with _stop_signals_lock:
+        _stop_signals[cid] = signal
 
     try:
         leads = get_leads(cid)
@@ -152,8 +181,22 @@ def analyze_campaign_leads(cid: int):
                 return
 
             result = analyze_website(lead["website"])
-            update_lead_score(lead["id"], result["score"], result["issues"],
-                              priority_label(result["score"]))
+            update_lead_score(
+                lead["id"], result["score"], result["issues"],
+                priority_label(result["score"]),
+                page_title=result.get("title", ""),
+            )
+
+            own_email = get_setting("gmail_user", "")
+            emails = extract_emails(
+                result.get("soup"),
+                result.get("response_text", ""),
+                result.get("url", lead["website"]),
+                own_email=own_email,
+            )
+            if emails and not lead["email"]:
+                update_lead_contact_email(lead["id"], emails[0])
+                logger.info("Email bulundu: %s ← %s", lead["name"], emails[0])
 
             pct = 5 + int((i + 1) / total * 90)
             update_campaign(cid, progress_step=f"Analiz: {i + 1}/{total}", progress_pct=pct)
@@ -172,75 +215,114 @@ def analyze_campaign_leads(cid: int):
                         progress_step="Analiz hatası — logları kontrol et",
                         progress_pct=100)
     finally:
-        _stop_signals.pop(cid, None)
+        with _stop_signals_lock:
+            _stop_signals.pop(cid, None)
 
 
-def send_campaign_emails(cid: int) -> dict:
+def _load_sender_from_settings() -> dict:
+    """Outreach mail signature/From için sender bilgisi."""
+    return {
+        "name":  get_setting("sender_name") or get_setting("gmail_user", "") or "Sender",
+        "title": get_setting("sender_title", ""),
+        "email": get_setting("sender_email") or get_setting("gmail_user", ""),
+    }
+
+
+def _try_render_template(tpl: str, prospect: dict) -> str | None:
+    """Pitch şablonunda {name}/{sector}/{website}/{issues}/{score} placeholder
+    varsa doldur. Hata olursa None döner (LLM fallback'e geçilir)."""
+    if not tpl:
+        return None
+    issues_text = ", ".join(prospect.get("issues_list") or []) or "—"
+    vars_ = dict(
+        name=prospect.get("name", ""),
+        sector=prospect.get("sector", ""),
+        website=prospect.get("website") or "—",
+        issues=issues_text,
+        score=prospect.get("quality_score") or "?",
+    )
+    try:
+        return tpl.format_map(vars_)
+    except (KeyError, ValueError) as exc:
+        logger.warning("Şablon placeholder hatası: %s", exc)
+        return None
+
+
+def send_campaign_emails(cid: int, batch_size: int = 10) -> dict:
+    """B2B outreach gönderim turu (sequence step 1).
+
+    Offering ZORUNLU. Description/pitch boşsa Claude default'a düşer,
+    ama offering kaydı şart (kim ne satıyor bilgisi).
+    """
     gmail_user = get_setting("gmail_user")
     gmail_pass = get_setting("gmail_password")
-
     if not gmail_user or not gmail_pass:
         logger.error("send_campaign_emails: Gmail ayarları eksik")
         return {"error": "Gmail kullanıcı adı veya şifresi eksik"}
 
-    # Özel email şablonu
-    template_de = get_setting("email_template_de", "")
-    template_en = get_setting("email_template_en", "")
-    use_template = bool(template_de and template_en)
+    campaign = get_campaign(cid)
+    if not campaign:
+        return {"error": "Kampanya bulunamadı"}
 
-    client = None
-    if not use_template:
-        api_key = get_setting("anthropic_api_key")
-        if not api_key:
-            logger.error("send_campaign_emails: Anthropic API key eksik ve şablon girilmemiş")
-            return {"error": "Anthropic API key ayarlanmamış (ya da Ayarlar'dan e-posta şablonu girin)"}
-        client = anthropic.Anthropic(api_key=api_key)
-    leads  = get_leads(cid)
+    offering = get_offering(campaign["offering_id"]) if campaign["offering_id"] else None
+    if not offering:
+        return {"error": "Kampanyada offering yok — Ayarlar'dan teklif ekle ve kampanya offering'ini güncelle"}
 
+    sender = _load_sender_from_settings()
+
+    api_key = get_setting("anthropic_api_key")
+    if not api_key:
+        return {"error": "Anthropic API key ayarlanmamış"}
+    client = anthropic.Anthropic(api_key=api_key)
+
+    offering_dict = dict(offering)
+    pitch_de = (offering_dict.get("pitch_de") or "").strip()
+    pitch_en = (offering_dict.get("pitch_en") or "").strip()
+    has_static_template = bool(pitch_de or pitch_en)
+
+    leads = get_leads(cid)
     targets = [
         l for l in leads
-        if l["priority"] == "YUKSEK"
+        if (l["priority"] == "YUKSEK" or (l["fit_score"] or 0) >= 60)
         and l["email"]
         and EMAIL_RE.match(l["email"])
         and l["email_sent"] == "Hayır"
     ]
+    logger.info("Kampanya %d: %d hedef (batch=%d, template=%s)",
+                cid, len(targets), batch_size, "static" if has_static_template else "LLM")
 
-    logger.info("Kampanya %d: %d adrese mail (%s)",
-                cid, min(len(targets), 10),
-                "özel şablon" if use_template else "Claude")
-
-    sent = 0
-    errors = 0
-    for lead in targets[:10]:
-        biz = {
+    sent, errors = 0, 0
+    for lead in targets[:batch_size]:
+        prospect = {
             "name":          lead["name"],
             "sector":        lead["sector"],
             "website":       lead["website"],
             "quality_score": lead["quality_score"],
-            "issues":        lead["issues"].split(", ") if lead["issues"] else [],
+            "fit_score":     lead["fit_score"],
+            "fit_reasons":   lead["fit_reasons"] or lead["issues"] or "",
+            "signals":       lead["signals"] or "",
+            "issues":        lead["issues"] or "",
+            "issues_list":   lead["issues"].split(", ") if lead["issues"] else [],
         }
 
         try:
-            if use_template:
-                issues_text = ", ".join(biz["issues"]) if biz["issues"] else "—"
-                vars_ = dict(
-                    name=biz["name"], sector=biz["sector"],
-                    website=biz["website"] or "—",
-                    issues=issues_text, score=biz["quality_score"] or "?"
-                )
-                try:
-                    de_body = template_de.format_map(vars_)
-                    en_body = template_en.format_map(vars_)
-                except KeyError as exc:
-                    logger.warning("Şablon değişken hatası: %s — lead id=%d", exc, lead["id"])
-                    de_body = template_de
-                    en_body = template_en
-                full_email = f"GERMAN:\n{de_body}\n\n---\n\nENGLISH:\n{en_body}"
-            else:
-                result     = generate_email(biz, client)
-                full_email = result.get("full", "")
+            full_email = None
+            # Static template varsa onu kullan, placeholder'ı doldur
+            if has_static_template:
+                de_body = _try_render_template(pitch_de, prospect) if pitch_de else ""
+                en_body = _try_render_template(pitch_en, prospect) if pitch_en else ""
+                if de_body or en_body:
+                    parts = []
+                    if de_body: parts.append(f"GERMAN:\n{de_body}")
+                    if en_body: parts.append(f"ENGLISH:\n{en_body}")
+                    full_email = "\n\n---\n\n".join(parts)
+
+            # Static template yok / placeholder bozuksa LLM'e bırak
+            if not full_email:
+                result = generate_outreach(prospect, offering_dict, client, sender=sender)
+                full_email = (result or {}).get("full", "")
                 if not full_email:
-                    raise ValueError("generate_email boş yanıt döndürdü")
+                    raise ValueError("generate_outreach boş yanıt döndürdü")
 
             success = send_email(
                 to_email=lead["email"],
@@ -248,17 +330,46 @@ def send_campaign_emails(cid: int) -> dict:
                 full_email=full_email,
                 gmail_user=gmail_user,
                 gmail_pass=gmail_pass,
+                sender_name=sender.get("name", ""),
             )
-            update_lead_email(lead["id"], "Evet" if success else "Hata")
+            from datetime import datetime
+            sent_at = datetime.now().isoformat() if success else None
+            update_lead_email(lead["id"], "Evet" if success else "Hata", sent_at=sent_at)
+
+            # Outreach mesajını sequence log'a kaydet (inbox/UI için)
+            next_step = get_last_outreach_step(lead["id"]) + 1
+            subject_line = ""
+            for line in full_email.splitlines():
+                s = line.strip()
+                if s.startswith(("Betreff:", "Subject:")):
+                    subject_line = s.split(":", 1)[1].strip()
+                    break
+            save_outreach_message(
+                lead_id=lead["id"],
+                campaign_id=cid,
+                offering_id=offering_dict.get("id"),
+                sequence_step=next_step,
+                subject=subject_line[:300],
+                body=full_email,
+                status="sent" if success else "failed",
+                error="" if success else "SMTP fail",
+            )
+
             if success:
                 sent += 1
                 logger.info("Mail gönderildi: %s <%s>", lead["name"], lead["email"])
             else:
                 errors += 1
 
-        except Exception:
+        except Exception as exc:
             logger.exception("Mail hatası — lead id=%d", lead["id"])
             update_lead_email(lead["id"], "Hata")
+            save_outreach_message(
+                lead_id=lead["id"], campaign_id=cid,
+                offering_id=offering_dict.get("id"),
+                sequence_step=get_last_outreach_step(lead["id"]) + 1,
+                subject="", body="", status="failed", error=str(exc)[:500],
+            )
             errors += 1
 
         time.sleep(3)
@@ -267,3 +378,5 @@ def send_campaign_emails(cid: int) -> dict:
     update_campaign(cid, emails_sent=sent_total)
     logger.info("Kampanya %d mail özeti: %d gönderildi, %d hata", cid, sent, errors)
     return {"sent": sent, "errors": errors}
+
+
