@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import anthropic
 
 from db import (conn, get_setting, get_campaign, get_offering,
-                save_outreach_message, get_last_outreach_step)
+                save_outreach_message)
 from agents.email_agent import generate_outreach, send_email, parse_subject
 
 logger = logging.getLogger(__name__)
@@ -39,40 +39,11 @@ def get_followup_candidates(cid: int, step: int, days_wait: int) -> list[dict]:
 
 
 def count_followup_ready(cid: int) -> int:
-    """UI badge için: kaç lead herhangi bir follow-up adımına hazır.
-
-    step2 sayısı: step-1 gönderilmiş ve 7+ gün geçmiş (step-2 olup olmadığına bakılmaz).
-    step3 sayısı: step-2 gönderilmiş ve 7+ gün geçmiş, step-3 henüz yok.
-    """
-    cutoff7 = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
-    with conn() as c:
-        step2_count = c.execute("""
-            SELECT COUNT(DISTINCT l.id)
-            FROM leads l
-            JOIN outreach_messages om
-              ON om.lead_id = l.id AND om.sequence_step = 1 AND om.status = 'sent'
-            WHERE l.campaign_id = ?
-              AND l.reply_received = 0
-              AND l.email IS NOT NULL AND l.email != ''
-              AND om.sent_at < ?
-        """, (cid, cutoff7)).fetchone()[0]
-
-        step3_count = c.execute("""
-            SELECT COUNT(DISTINCT l.id)
-            FROM leads l
-            JOIN outreach_messages om
-              ON om.lead_id = l.id AND om.sequence_step = 2 AND om.status = 'sent'
-            WHERE l.campaign_id = ?
-              AND l.reply_received = 0
-              AND l.email IS NOT NULL AND l.email != ''
-              AND om.sent_at < ?
-              AND NOT EXISTS (
-                  SELECT 1 FROM outreach_messages om3
-                  WHERE om3.lead_id = l.id AND om3.sequence_step = 3
-              )
-        """, (cid, cutoff7)).fetchone()[0]
-
-    return step2_count + step3_count
+    """UI badge için: kaç lead herhangi bir follow-up adımına hazır."""
+    return (
+        len(get_followup_candidates(cid, step=2, days_wait=7)) +
+        len(get_followup_candidates(cid, step=3, days_wait=14))
+    )
 
 
 def _load_sender() -> dict:

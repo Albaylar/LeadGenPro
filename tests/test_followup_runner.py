@@ -109,4 +109,4 @@ def test_count_followup_ready(test_db):
     _insert_outreach(test_db, lid2, cid, step=2, sent_at_offset_days=8)   # step3 hazır
 
     from followup_runner import count_followup_ready
-    assert count_followup_ready(cid) == 3  # lid1:step2 + lid2:step2 + lid2:step3
+    assert count_followup_ready(cid) == 2  # lid1:step2 + lid2:step3 (lid2 step2 already sent)
