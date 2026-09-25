@@ -745,7 +745,7 @@ async function sendFollowups() {
     }
     const data = await res.json();
     if (data.ok) {
-      btn.textContent = 'Gönderildi ✓';
+      btn.textContent = 'Başlatıldı ✓';
     } else {
       btn.textContent = 'Hata';
       btn.disabled = false;

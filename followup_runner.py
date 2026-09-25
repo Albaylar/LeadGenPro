@@ -107,7 +107,7 @@ def send_followup_sequence(cid: int) -> dict:
 
                 extra_headers: dict[str, str] = {}
                 if lead.get("first_subject"):
-                    msg_id = f"<campaign{cid}_lead{lead['id']}_step1@leadgenpro>"
+                    msg_id = f"<campaign{cid}_lead{lead['id']}_step1@leadgenpro.local>"
                     extra_headers["In-Reply-To"] = msg_id
                     extra_headers["References"]  = msg_id
 

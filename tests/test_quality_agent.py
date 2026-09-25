@@ -102,6 +102,10 @@ def test_analyze_website_returns_soup_and_text(requests_mock):
         text='<html lang="de"><body><a href="/impressum">Impressum</a></body></html>',
         headers={"Content-Type": "text/html"},
     )
+    requests_mock.get(
+        "https://example.de/impressum",
+        text="Inhaber: Max Mustermann, 12345 Berlin, +49 30 123456, max@example.de",
+    )
     result = analyze_website("https://example.de")
     assert "soup" in result
     assert "response_text" in result

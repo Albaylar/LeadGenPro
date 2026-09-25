@@ -110,3 +110,50 @@ def test_count_followup_ready(test_db):
 
     from followup_runner import count_followup_ready
     assert count_followup_ready(cid) == 2  # lid1:step2 + lid2:step3 (lid2 step2 already sent)
+
+
+def test_send_followup_sequence_sends_step2(test_db, monkeypatch):
+    import followup_runner
+    oid = _insert_offering(test_db)
+    cid = _insert_campaign(test_db, offering_id=oid)
+    lid = _insert_lead(test_db, cid)
+    _insert_outreach(test_db, lid, cid, step=1, sent_at_offset_days=8)
+
+    # Seed required settings
+    import sqlite3
+    with sqlite3.connect(test_db) as c:
+        for key, val in [
+            ("gmail_user", "test@gmail.com"),
+            ("gmail_password", "pass"),
+            ("anthropic_api_key", "sk-test"),
+            ("sender_name", "Test Sender"),
+        ]:
+            c.execute("INSERT OR REPLACE INTO settings(key, value) VALUES(?,?)", (key, val))
+
+    sent_headers: list[dict] = []
+
+    def mock_generate(prospect, offering, client, sender=None, model=None, sequence_step=1):
+        return {"full": "GERMAN:\nBetreff: Test\n\nBody\n\n---\n\nENGLISH:\nSubject: Test\n\nBody"}
+
+    def mock_send(to_email, business_name, full_email, gmail_user="", gmail_pass="",
+                  sender_name="", extra_headers=None):
+        sent_headers.append(extra_headers or {})
+        return True
+
+    monkeypatch.setattr(followup_runner, "generate_outreach", mock_generate)
+    monkeypatch.setattr(followup_runner, "send_email", mock_send)
+
+    result = followup_runner.send_followup_sequence(cid)
+    assert result["step2_sent"] == 1
+    assert result["errors"] == 0
+    assert any("In-Reply-To" in h for h in sent_headers)
+
+    # Verify outreach_messages row written
+    import db as db_module
+    with db_module.conn() as c:
+        rows = c.execute(
+            "SELECT sequence_step, status FROM outreach_messages WHERE lead_id=? AND sequence_step=2",
+            (lid,)
+        ).fetchall()
+    assert len(rows) == 1
+    assert rows[0]["status"] == "sent"

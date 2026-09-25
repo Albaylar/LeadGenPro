@@ -332,7 +332,7 @@ def send_campaign_emails(cid: int, batch_size: int = 10) -> dict:
                 gmail_user=gmail_user,
                 gmail_pass=gmail_pass,
                 sender_name=sender.get("name", ""),
-                extra_headers={"Message-ID": f"<campaign{cid}_lead{lead['id']}_step1@leadgenpro>"},
+                extra_headers={"Message-ID": f"<campaign{cid}_lead{lead['id']}_step1@leadgenpro.local>"},
             )
             from datetime import datetime
             sent_at = datetime.now().isoformat() if success else None

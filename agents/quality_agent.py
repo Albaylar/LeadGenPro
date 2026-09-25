@@ -2,6 +2,7 @@ import logging
 import re
 import time
 import warnings
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
@@ -29,7 +30,7 @@ def _check_german_compliance(soup: BeautifulSoup, response_text: str, url: str) 
     else:
         raw_href = impressum_tag.get("href", "")
         if raw_href:
-            imp_url = raw_href if raw_href.startswith("http") else url.rstrip("/") + "/" + raw_href.lstrip("/")
+            imp_url = raw_href if raw_href.startswith("http") else urljoin(url, raw_href)
             try:
                 headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
                 resp = requests.get(imp_url, headers=headers, timeout=8, allow_redirects=True)
@@ -43,8 +44,8 @@ def _check_german_compliance(soup: BeautifulSoup, response_text: str, url: str) 
                 if found < 2:
                     issues.append("[HUKUK] Impressum içeriği yetersiz (adres/telefon/email eksik)")
                     deduction += 15
-            except Exception:
-                pass
+            except requests.RequestException as e:
+                logger.debug("Impressum sayfası alınamadı (%s): %s", imp_url, e)
 
     datenschutz_tag = (
         soup.find("a", string=re.compile(r"datenschutz", re.I)) or
@@ -194,6 +195,7 @@ def analyze_website(url: str) -> dict:
         return {"url": url, "score": 0, "issues": ["Siteye ulaşılamıyor"],
                 "load_time": None, "title": "", "soup": None, "response_text": ""}
     except Exception as e:
+        logger.exception("analyze_website beklenmedik hata: %s", url)
         return {"url": url, "score": 0, "issues": [f"Hata: {str(e)[:60]}"],
                 "load_time": None, "title": "", "soup": None, "response_text": ""}
 
